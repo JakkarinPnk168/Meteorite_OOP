@@ -41,7 +41,12 @@ class FrameMT extends JFrame{
 }
 
 class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
-    Image ghost = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
+
+    Image met = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
+            File.separator + "met.png");
+    Image met1 = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
+            File.separator + "met.png");
+    Image met2 = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
             File.separator + "met.png");
     //ขยับ
     int showGhost = 10;
@@ -52,6 +57,10 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
     int [] SGhostY = new int[showGhost];
     int [] SGhostX = new int[showGhost];
 
+    //หลายภาพ
+    Image[] meteorite = new Image[3];
+    int[] meteoriteType = new int[showGhost];
+
     public BgMeteor() {
         setSize(990, 527);
         setLocation(0, 0);
@@ -59,14 +68,25 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         addMouseMotionListener(this);
         addMouseListener(this);
 
+        meteorite[0] = Toolkit.getDefaultToolkit().createImage
+                (System.getProperty("user.dir") + File.separator + "met.png");
+        meteorite[1] = Toolkit.getDefaultToolkit().createImage
+                (System.getProperty("user.dir") + File.separator + "met1.png");
+        meteorite[2] = Toolkit.getDefaultToolkit().createImage
+                (System.getProperty("user.dir") + File.separator + "met2.png");
+
         Random random = new Random();
         for (int i = 0; i < showGhost; i++) {
+            boolean over;
 
             ghostX[i] = (int) (Math.random() * 950);
             ghostY[i] = (int) (Math.random() * 500);
 
             SGhostX[i] = random.nextInt(7) - 3;
             SGhostY[i] = random.nextInt(7) - 3;
+
+            //บันทกตัวเลข array ลงนี่
+            meteoriteType[i] = random.nextInt(meteorite.length);//สุ่มเลือกภาพ
         }
 
         Timer time = new Timer(16, new ActionListener() {
@@ -102,6 +122,26 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
                 ghostY[i] = getHeight() - ghostSize;
                 SGhostY[i] = -SGhostY[i];
             }
+
+            //เด้ง
+//            for (int m = 0; m < showGhost; m++) {
+//                Rectangle r1 = new Rectangle(ghostX[m], ghostY[m], ghostSize, ghostSize);
+//                for (int j = m+1; j < showGhost; j++) {
+//                    Rectangle r2 = new Rectangle(ghostX[j], ghostY[j], ghostSize, ghostSize);
+//                    if (r1.intersects(r2)) {
+//
+//                        SGhostX[m] = -SGhostX[m];
+//                        SGhostY[m] = -SGhostY[m];
+//                        SGhostX[j] = -SGhostX[j];
+//                        SGhostY[j] = -SGhostY[j];
+//
+//                        ghostX[m] += SGhostX[m];
+//                        ghostY[m] += SGhostY[m];
+//                        ghostX[j] += SGhostX[j];
+//                        ghostY[j] += SGhostY[j];
+//                    }
+//                }
+//            }
         }
         repaint();
     }
@@ -113,7 +153,8 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         g.fillRect(0, 0, getWidth(), getHeight());
 
         for (int i = 0; i < showGhost; i++) {
-            g.drawImage(ghost, ghostX[i], ghostY[i], 50, 50, this);
+                    //เก็บรูปหลายแบบ   ใช้รูปไหน            ตำแหน่ง     ตำแหน่ง
+            g.drawImage(meteorite[meteoriteType[i]], ghostX[i], ghostY[i], 50, 50, this);
         }
     }
 
