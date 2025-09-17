@@ -84,17 +84,9 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
             ghostX[i] += SGhostX[i];
             ghostY[i] += SGhostY[i];
 
-//            // ชนขอบซ้าย-ขวา
-//            if (ghostX[i] < 0 || ghostX[i] > getWidth() - 100) {
-//                SGhostX[i] = -SGhostX[i];
-//            }
-//            // ชนขอบบน-ล่าง
-//            if (ghostY[i] < 0 || ghostY[i] > getHeight() - 100) {
-//                SGhostY[i] = -SGhostY[i];
-//            }
-            int ghostSize = 100;
+            int ghostSize = 50;
 
-            // ชนขอบซ้าย-ขวา
+            //  ขอบซ้าย-ขวา
             if (ghostX[i] < 0) {
                 ghostX[i] = 0;
                 SGhostX[i] = -SGhostX[i];
@@ -103,9 +95,9 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
                 SGhostX[i] = -SGhostX[i];
             }
 
-            // ชนขอบบน-ล่าง
-            if (ghostY[i] < -8) {
-                ghostY[i] = -8;
+            //  ขอบบน-ล่าง
+            if (ghostY[i] < 0) {
+                ghostY[i] = 0;
                 SGhostY[i] = -SGhostY[i];
             } else if (ghostY[i] > getHeight() - ghostSize) {
                 ghostY[i] = getHeight() - ghostSize;
@@ -122,14 +114,10 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         g.fillRect(0, 0, getWidth(), getHeight());
 
         for (int i = 0; i < 5; i++) {
-            g.drawImage(ghost, ghostX[i], ghostY[i], 100, 100, this);
+            g.drawImage(ghost, ghostX[i], ghostY[i], 50, 50, this);
         }
     }
 
-
-    @Override
-    public void mouseClicked(MouseEvent e) {
-    }
     @Override
     public void mousePressed(MouseEvent e) {
         int ChilckX = e.getX();
@@ -137,20 +125,19 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         System.out.println(ChilckX+ " "+ChilckY);
     }
     @Override
-    public void mouseReleased(MouseEvent e) {
-    }
-    @Override
-    public void mouseEntered(MouseEvent e) {
-    }
-    @Override
-    public void mouseExited(MouseEvent e) {
-    }
-    @Override
-    public void mouseDragged(MouseEvent e) {
-    }
-    @Override
     public void mouseMoved(MouseEvent e) {
 //        System.out.println(e.getX()+" "+e.getY());
         repaint();
     }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {}
+    @Override
+    public void mouseReleased(MouseEvent e) {}
+    @Override
+    public void mouseEntered(MouseEvent e) {}
+    @Override
+    public void mouseExited(MouseEvent e) {}
+    @Override
+    public void mouseDragged(MouseEvent e) {}
 }
