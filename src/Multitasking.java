@@ -43,9 +43,8 @@ class FrameMT extends JFrame{
 class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
     Image ghost = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
             File.separator + "met.png");
-
-    int showGhost = 5;
     //ขยับ
+    int showGhost = 10;
     int [] ghostX = new int[showGhost];
     int [] ghostY = new int[showGhost];
 
@@ -113,7 +112,7 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < showGhost; i++) {
             g.drawImage(ghost, ghostX[i], ghostY[i], 50, 50, this);
         }
     }
