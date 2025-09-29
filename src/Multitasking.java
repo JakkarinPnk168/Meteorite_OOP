@@ -14,7 +14,7 @@ public class Multitasking {
 
 class Time extends TimerTask {
     BgMeteor panel;
-    public  Time(BgMeteor panel){
+    public Time(BgMeteor panel){
         this.panel = panel;
     }
     @Override
@@ -40,26 +40,26 @@ class FrameMT extends JFrame{
     }
 }
 
-class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
+class BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
 
-//    Image met = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
-//            File.separator + "met.png");
-//    Image met1 = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
-//            File.separator + "met.png");
-//    Image met2 = Toolkit.getDefaultToolkit().createImage(System.getProperty("user.dir") +
-//            File.separator + "met.png");
-    //ขยับ
+    // ขยับ
     int showGhost = 10;
     int [] ghostX = new int[showGhost];
     int [] ghostY = new int[showGhost];
 
-    //สมูท
+    // สมูท
     int [] SGhostY = new int[showGhost];
     int [] SGhostX = new int[showGhost];
 
-    //หลายภาพ
+    // หลายภาพ
     Image[] meteorite = new Image[10];
     int[] meteoriteType = new int[showGhost];
+
+    // อยู่หรือหาย
+    boolean[] alive = new boolean[showGhost];
+    boolean[] exploding = new boolean[showGhost]; // กำลังระเบิด
+
+    Image bombGif; // GIF ระเบิด
 
     public BgMeteor() {
         setSize(990, 527);
@@ -68,30 +68,15 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         addMouseMotionListener(this);
         addMouseListener(this);
 
-        meteorite[0] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "1.png");
-        meteorite[1] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "2.png");
-        meteorite[2] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "3.png");
-        meteorite[3] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "4.png");
-        meteorite[4] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "5.png");
-        meteorite[5] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "6.png");
-        meteorite[6] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "7.png");
-        meteorite[7] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "8.png");
-        meteorite[8] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "9.png");
-        meteorite[9] = Toolkit.getDefaultToolkit().createImage
-                (System.getProperty("user.dir") + File.separator + "10.png");
+        bombGif = new ImageIcon(System.getProperty("user.dir") + File.separator + "bomb.gif").getImage();
+
+        for (int i = 0; i < meteorite.length; i++) {
+            meteorite[i] = Toolkit.getDefaultToolkit().createImage(
+                    System.getProperty("user.dir") + File.separator + (i+1) + ".png");
+        }
 
         Random random = new Random();
         for (int i = 0; i < showGhost; i++) {
-            boolean over;
 
             ghostX[i] = (int) (Math.random() * 950);
             ghostY[i] = (int) (Math.random() * 500);
@@ -99,8 +84,8 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
             SGhostX[i] = random.nextInt(7) - 3;
             SGhostY[i] = random.nextInt(7) - 3;
 
-            //บันทกตัวเลข array ลงนี่
-            meteoriteType[i] = random.nextInt(meteorite.length);//สุ่มเลือกภาพ
+            meteoriteType[i] = random.nextInt(meteorite.length); // สุ่มเลือกภาพ
+            alive[i] = true;
         }
 
         Timer time = new Timer(16, new ActionListener() {
@@ -112,52 +97,89 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         time.start();
     }
 
+    long[] explodeStart = new long[showGhost];
+    int explodeDuration = 500;
     private void update() {
+        int ghostSize = 50;
+
         for (int i = 0; i < showGhost; i++) {
+            // ถ้ากำลังระเบิด
+            if (exploding[i]) {
+                // ตรวจสอบเวลาที่เล่นระเบิด
+                if (System.currentTimeMillis() - explodeStart[i] > explodeDuration) {
+                    exploding[i] = false;
+                    ghostX[i] = -1000;
+                    ghostY[i] = -1000;
+                }
+                continue; // ไม่ต้องอัปเดตตำแหน่ง
+            }
+
+            if (!alive[i]) continue; // ข้ามลูกที่หายไป
+
+            // --- อัปเดตตำแหน่งปกติ ---
             ghostX[i] += SGhostX[i];
             ghostY[i] += SGhostY[i];
 
-            int ghostSize = 50;
-
-            //  ขอบซ้าย-ขวา
+            // ขอบซ้าย-ขวา
             if (ghostX[i] < 0) {
                 ghostX[i] = 0;
                 SGhostX[i] = -SGhostX[i];
+                SGhostX[i] *= 1.2;
             } else if (ghostX[i] > getWidth() - ghostSize) {
                 ghostX[i] = getWidth() - ghostSize;
                 SGhostX[i] = -SGhostX[i];
+                SGhostX[i] *= 1.2;
             }
 
-            //  ขอบบน-ล่าง
+            // ขอบบน-ล่าง
             if (ghostY[i] < 0) {
                 ghostY[i] = 0;
                 SGhostY[i] = -SGhostY[i];
+                SGhostY[i] *= 1.2;
             } else if (ghostY[i] > getHeight() - ghostSize) {
                 ghostY[i] = getHeight() - ghostSize;
                 SGhostY[i] = -SGhostY[i];
+                SGhostY[i] *= 1.2;
             }
 
-            //เด้ง
-//            for (int m = 0; m < showGhost; m++) {
-//                Rectangle r1 = new Rectangle(ghostX[m], ghostY[m], ghostSize, ghostSize);
-//                for (int j = m+1; j < showGhost; j++) {
-//                    Rectangle r2 = new Rectangle(ghostX[j], ghostY[j], ghostSize, ghostSize);
-//                    if (r1.intersects(r2)) {
-//
-//                        SGhostX[m] = -SGhostX[m];
-//                        SGhostY[m] = -SGhostY[m];
-//                        SGhostX[j] = -SGhostX[j];
-//                        SGhostY[j] = -SGhostY[j];
-//
-//                        ghostX[m] += SGhostX[m];
-//                        ghostY[m] += SGhostY[m];
-//                        ghostX[j] += SGhostX[j];
-//                        ghostY[j] += SGhostY[j];
-//                    }
-//                }
-//            }
+            int maxSpeed = 15;
+            SGhostX[i] = Math.max(-maxSpeed, Math.min(maxSpeed, SGhostX[i]));
+            SGhostY[i] = Math.max(-maxSpeed, Math.min(maxSpeed, SGhostY[i]));
+
+            // ตรวจสอบการชนกัน
+            for (int m = 0; m < showGhost; m++) {
+                if (!alive[m]) continue;
+                Rectangle r1 = new Rectangle(ghostX[m], ghostY[m], ghostSize, ghostSize);
+
+                for (int j = m + 1; j < showGhost; j++) {
+                    if (!alive[j]) continue;
+                    Rectangle r2 = new Rectangle(ghostX[j], ghostY[j], ghostSize, ghostSize);
+
+                    if (r1.intersects(r2)) {
+                        int toRemove;
+                        if (new Random().nextBoolean()) {
+                            toRemove = m;
+                        } else {
+                            toRemove = j;
+                        }
+                        alive[toRemove] = false;
+                        SGhostX[toRemove] = 0;
+                        SGhostY[toRemove] = 0;
+                        exploding[toRemove] = true;
+                        explodeStart[toRemove] = System.currentTimeMillis(); // บันทึกเวลาเริ่มระเบิด
+
+                        int survivor;
+                        if (toRemove == m) {
+                            survivor = j;
+                        } else {
+                            survivor = m;
+                        }
+                        SGhostX[survivor] = -SGhostX[survivor];
+                        SGhostY[survivor] = -SGhostY[survivor];
+                    }
+                }
+            }
         }
-        repaint();
     }
 
     @Override
@@ -165,11 +187,19 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         super.paintComponent(g);
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
-//
 
         for (int i = 0; i < showGhost; i++) {
-                    //เก็บรูปหลายแบบ   ใช้รูปไหน            ตำแหน่ง     ตำแหน่ง
-            g.drawImage(meteorite[meteoriteType[i]], ghostX[i], ghostY[i], 50, 50, this);
+            if (exploding[i]) {
+                g.drawImage(bombGif, ghostX[i], ghostY[i], 50, 50, this); // วาด GIF ระเบิด
+            } else if (alive[i]) {
+                Image img = meteorite[meteoriteType[i]];
+                if (img != null) {
+                    g.drawImage(img, ghostX[i], ghostY[i], 50, 50, this);
+                } else {
+                    g.setColor(Color.LIGHT_GRAY);
+                    g.fillOval(ghostX[i], ghostY[i], 50, 50);
+                }
+            }
         }
     }
 
@@ -177,11 +207,10 @@ class  BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
     public void mousePressed(MouseEvent e) {
         int ChilckX = e.getX();
         int ChilckY = e.getY();
-        System.out.println(ChilckX+ " "+ChilckY);
+        System.out.println(ChilckX + " " + ChilckY);
     }
     @Override
     public void mouseMoved(MouseEvent e) {
-//        System.out.println(e.getX()+" "+e.getY());
         repaint();
     }
 
