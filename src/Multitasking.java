@@ -3,7 +3,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.Random;
-import java.util.TimerTask;
 
 public class Multitasking {
     public static void main(String[] args) {
@@ -12,27 +11,11 @@ public class Multitasking {
     }
 }
 
-class Time extends TimerTask {
-    BgMeteor panel;
-    public Time(BgMeteor panel){
-        this.panel = panel;
-    }
-    @Override
-    public void run() {
-        for (int i = 0; i < panel.showGhost; i++) {
-            int randox = new Random().nextInt(40) - 20;
-            int randoy = new Random().nextInt(40) - 20;
-            panel.ghostX[i] += randox;
-            panel.ghostY[i] += randoy;
-        }
-        panel.repaint();
-    }
-}
+class FrameMT extends JFrame {
+    BgMeteor bgmeteor = new BgMeteor(10); // กำหนดจำนวนอุกกาบาตได้
 
-class FrameMT extends JFrame{
-    BgMeteor bgmeteor = new BgMeteor();
-    public FrameMT(){
-        setSize(1000,563);
+    public FrameMT() {
+        setSize(1000, 563);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(null);
@@ -40,147 +23,180 @@ class FrameMT extends JFrame{
     }
 }
 
-class BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
+class Meteor implements Runnable {
+    int x, y;
+    int dx, dy;
+    int size = 50;
+    boolean alive = true;
+    boolean exploding = false;
+    long explodeStart;
+    int explodeDuration = 500; // ms
+    Image img;
+    Image bombGif;
+    BgMeteor panel;
+    Random rand = new Random();
 
-    // ขยับ
-    int showGhost = 10;
-    int [] ghostX = new int[showGhost];
-    int [] ghostY = new int[showGhost];
+    public Meteor(BgMeteor panel, Image img, Image bombGif) {
+        this.panel = panel;
+        this.img = img;
+        this.bombGif = bombGif;
 
-    // สมูท
-    int [] SGhostY = new int[showGhost];
-    int [] SGhostX = new int[showGhost];
+        // เริ่มตำแหน่งสุ่ม
+        this.x = rand.nextInt(Math.max(1, panel.getWidth() - size));
+        this.y = rand.nextInt(Math.max(1, panel.getHeight() - size));
 
-    // หลายภาพ
+        // ความเร็วเริ่มต้น (สุ่มไม่เท่ากัน)
+        this.dx = rand.nextInt(7) - 3;
+        this.dy = rand.nextInt(7) - 3;
+        if (dx == 0 && dy == 0) {
+            dx = 2; // กันหยุดนิ่ง
+            dy = 1;
+        }
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                if (exploding) {
+                    if (System.currentTimeMillis() - explodeStart > explodeDuration) {
+                        // หมดเวลาระเบิด → ไม่วาดอีก
+                        exploding = false;
+                        alive = false;
+                    }
+                } else if (alive) {
+                    move();
+                }
+
+                panel.repaint();
+                Thread.sleep(30); // ประมาณ 33 fps
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void move() {
+        x += dx;
+        y += dy;
+
+        // ชนขอบ
+        if (x < 0 || x > panel.getWidth() - size) {
+            dx = -dx;
+            dx *= 1.2; // เพิ่มความเร็ว
+        }
+        if (y < 0 || y > panel.getHeight() - size) {
+            dy = -dy;
+            dy *= 1.2;
+        }
+
+        // จำกัดความเร็วสูงสุด
+        int maxSpeed = 15;
+        dx = Math.max(-maxSpeed, Math.min(maxSpeed, dx));
+        dy = Math.max(-maxSpeed, Math.min(maxSpeed, dy));
+    }
+
+    public void explode() {
+        if (!alive || exploding) return; // ป้องกันซ้ำ
+        exploding = true;
+        explodeStart = System.currentTimeMillis();
+        dx = 0;
+        dy = 0;
+    }
+
+    public void bounce() {
+        dx = -dx;
+        dy = -dy;
+        // กันหยุดนิ่ง
+        if (dx == 0) dx = rand.nextInt(3) + 1;
+        if (dy == 0) dy = rand.nextInt(3) + 1;
+
+        // เพิ่มแรงกระแทก
+        dx *= 1.2;
+        dy *= 1.2;
+
+        // จำกัดความเร็วสูงสุด
+        int maxSpeed = 15;
+        dx = Math.max(-maxSpeed, Math.min(maxSpeed, dx));
+        dy = Math.max(-maxSpeed, Math.min(maxSpeed, dy));
+    }
+
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, size, size);
+    }
+
+    public void draw(Graphics g) {
+        if (alive) {
+            if (exploding) {
+                g.drawImage(bombGif, x, y, size, size, panel);
+            } else {
+                g.drawImage(img, x, y, size, size, panel);
+            }
+        }
+    }
+}
+
+class BgMeteor extends JPanel implements MouseListener {
+    Meteor[] meteors;
     Image[] meteorite = new Image[10];
-    int[] meteoriteType = new int[showGhost];
+    Image bombGif;
+    Random rand = new Random();
 
-    // อยู่หรือหาย
-    boolean[] alive = new boolean[showGhost];
-    boolean[] exploding = new boolean[showGhost]; // กำลังระเบิด
-
-    Image bombGif; // GIF ระเบิด
-
-    public BgMeteor() {
+    public BgMeteor(int count) {
         setSize(990, 527);
         setLocation(0, 0);
-
-        addMouseMotionListener(this);
         addMouseListener(this);
 
         bombGif = new ImageIcon(System.getProperty("user.dir") + File.separator + "bomb.gif").getImage();
-
         for (int i = 0; i < meteorite.length; i++) {
             meteorite[i] = Toolkit.getDefaultToolkit().createImage(
-                    System.getProperty("user.dir") + File.separator + (i+1) + ".png");
+                    System.getProperty("user.dir") + File.separator + (i + 1) + ".png");
         }
 
-        Random random = new Random();
-        for (int i = 0; i < showGhost; i++) {
-
-            ghostX[i] = (int) (Math.random() * 950);
-            ghostY[i] = (int) (Math.random() * 500);
-
-            SGhostX[i] = random.nextInt(7) - 3;
-            SGhostY[i] = random.nextInt(7) - 3;
-
-            meteoriteType[i] = random.nextInt(meteorite.length); // สุ่มเลือกภาพ
-            alive[i] = true;
+        meteors = new Meteor[count];
+        for (int i = 0; i < count; i++) {
+            meteors[i] = new Meteor(this,
+                    meteorite[rand.nextInt(meteorite.length)], bombGif);
+            new Thread(meteors[i]).start();
         }
 
-        Timer time = new Timer(16, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                update();
+        // Thread ตรวจสอบการชน
+        new Thread(() -> {
+            while (true) {
+                checkCollision();
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        });
-        time.start();
+        }).start();
     }
 
-    long[] explodeStart = new long[showGhost];
-    int explodeDuration = 500;
-    private void update() {
-        int ghostSize = 50;
+    private void checkCollision() {
+        for (int i = 0; i < meteors.length; i++) {
+            if (!meteors[i].alive) continue;
+            Rectangle r1 = meteors[i].getBounds();
+            for (int j = i + 1; j < meteors.length; j++) {
+                if (!meteors[j].alive) continue;
+                Rectangle r2 = meteors[j].getBounds();
 
-        for (int i = 0; i < showGhost; i++) {
-            // ถ้ากำลังระเบิด
-            if (exploding[i]) {
-                // ตรวจสอบเวลาที่เล่นระเบิด
-                if (System.currentTimeMillis() - explodeStart[i] > explodeDuration) {
-                    exploding[i] = false;
-                    ghostX[i] = -1000;
-                    ghostY[i] = -1000;
-                }
-                continue; // ไม่ต้องอัปเดตตำแหน่ง
-            }
-
-            if (!alive[i]) continue; // ข้ามลูกที่หายไป
-
-            // --- อัปเดตตำแหน่งปกติ ---
-            ghostX[i] += SGhostX[i];
-            ghostY[i] += SGhostY[i];
-
-            // ขอบซ้าย-ขวา
-            if (ghostX[i] < 0) {
-                ghostX[i] = 0;
-                SGhostX[i] = -SGhostX[i];
-                SGhostX[i] *= 1.2;
-            } else if (ghostX[i] > getWidth() - ghostSize) {
-                ghostX[i] = getWidth() - ghostSize;
-                SGhostX[i] = -SGhostX[i];
-                SGhostX[i] *= 1.2;
-            }
-
-            // ขอบบน-ล่าง
-            if (ghostY[i] < 0) {
-                ghostY[i] = 0;
-                SGhostY[i] = -SGhostY[i];
-                SGhostY[i] *= 1.2;
-            } else if (ghostY[i] > getHeight() - ghostSize) {
-                ghostY[i] = getHeight() - ghostSize;
-                SGhostY[i] = -SGhostY[i];
-                SGhostY[i] *= 1.2;
-            }
-
-            int maxSpeed = 15;
-            SGhostX[i] = Math.max(-maxSpeed, Math.min(maxSpeed, SGhostX[i]));
-            SGhostY[i] = Math.max(-maxSpeed, Math.min(maxSpeed, SGhostY[i]));
-
-            // ตรวจสอบการชนกัน
-            for (int m = 0; m < showGhost; m++) {
-                if (!alive[m]) continue;
-                Rectangle r1 = new Rectangle(ghostX[m], ghostY[m], ghostSize, ghostSize);
-
-                for (int j = m + 1; j < showGhost; j++) {
-                    if (!alive[j]) continue;
-                    Rectangle r2 = new Rectangle(ghostX[j], ghostY[j], ghostSize, ghostSize);
-
-                    if (r1.intersects(r2)) {
-                        int toRemove;
-                        if (new Random().nextBoolean()) {
-                            toRemove = m;
+                if (r1.intersects(r2)) {
+                    // ให้ระเบิดแค่ลูกเดียว อีกลูกไม่เปลี่ยนทิศทาง
+                    if (!meteors[i].exploding && !meteors[j].exploding) {
+                        if (rand.nextBoolean()) {
+                            meteors[i].explode();
+                            // meteors[j] เคลื่อนที่ต่อไปตามเดิม
                         } else {
-                            toRemove = j;
+                            meteors[j].explode();
+                            // meteors[i] เคลื่อนที่ต่อไปตามเดิม
                         }
-                        alive[toRemove] = false;
-                        SGhostX[toRemove] = 0;
-                        SGhostY[toRemove] = 0;
-                        exploding[toRemove] = true;
-                        explodeStart[toRemove] = System.currentTimeMillis(); // บันทึกเวลาเริ่มระเบิด
-
-                        int survivor;
-                        if (toRemove == m) {
-                            survivor = j;
-                        } else {
-                            survivor = m;
-                        }
-                        SGhostX[survivor] = -SGhostX[survivor];
-                        SGhostY[survivor] = -SGhostY[survivor];
                     }
                 }
             }
         }
     }
+
 
     @Override
     public void paintComponent(Graphics g) {
@@ -188,40 +204,18 @@ class BgMeteor extends JPanel implements MouseMotionListener, MouseListener {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
 
-        for (int i = 0; i < showGhost; i++) {
-            if (exploding[i]) {
-                g.drawImage(bombGif, ghostX[i], ghostY[i], 50, 50, this); // วาด GIF ระเบิด
-            } else if (alive[i]) {
-                Image img = meteorite[meteoriteType[i]];
-                if (img != null) {
-                    g.drawImage(img, ghostX[i], ghostY[i], 50, 50, this);
-                } else {
-                    g.setColor(Color.LIGHT_GRAY);
-                    g.fillOval(ghostX[i], ghostY[i], 50, 50);
-                }
-            }
+        for (Meteor m : meteors) {
+            m.draw(g);
         }
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        int ChilckX = e.getX();
-        int ChilckY = e.getY();
-        System.out.println(ChilckX + " " + ChilckY);
-    }
-    @Override
-    public void mouseMoved(MouseEvent e) {
-        repaint();
+        System.out.println("Click at: " + e.getX() + "," + e.getY());
     }
 
-    @Override
-    public void mouseClicked(MouseEvent e) {}
-    @Override
-    public void mouseReleased(MouseEvent e) {}
-    @Override
-    public void mouseEntered(MouseEvent e) {}
-    @Override
-    public void mouseExited(MouseEvent e) {}
-    @Override
-    public void mouseDragged(MouseEvent e) {}
+    @Override public void mouseClicked(MouseEvent e) {}
+    @Override public void mouseReleased(MouseEvent e) {}
+    @Override public void mouseEntered(MouseEvent e) {}
+    @Override public void mouseExited(MouseEvent e) {}
 }
